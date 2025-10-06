@@ -18,7 +18,7 @@ npm install tcp-builder
 
 Or clone this repository:
 ```bash
-git clone <repository-url>
+git clone https://github.com/Jram2001/tcp-builder.git
 cd tcp-builder
 ```
 
