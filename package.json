@@ -1,7 +1,14 @@
 {
     "name": "tcp-builder",
-    "version": "1.0.0",
+    "version": "1.0.2",
     "main": "tcp.js",
     "description": "Custom TCP packet builder utilities for OS detection and network protocol probes",
-    "keywords": ["tcp", "networking", "packet", "tcp-packet", "nodejs", "network-tools"]
+    "keywords": [
+        "tcp",
+        "networking",
+        "packet",
+        "tcp-packet",
+        "nodejs",
+        "network-tools"
+    ]
 }
