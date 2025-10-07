@@ -219,7 +219,7 @@ try {
 // ===== Test 7: Probe Configurations (Using Correct Export Names) =====
 console.log('\n📝 Test 7: Probe Configurations');
 const probeTests = [
-    'T1_options', 'T2_options', 'T3_options', 'T4_options', 
+    'T1_options', 'T2_options', 'T3_options', 'T4_options',
     'T5_options', 'T6_options', 'T7_options', 'ECN_options',
     'MSS_only', 'WSCALE_only', 'SACK_only', 'TIMESTAMP_only'
 ];
@@ -375,7 +375,7 @@ try {
 
 // ===== Test Results Summary =====
 console.log('\n📊 Test Results Summary');
-console.log('=' .repeat(50));
+console.log('='.repeat(50));
 console.log(`Total Tests: ${testCount}`);
 console.log(`✅ Passed: ${passedTests}`);
 console.log(`❌ Failed: ${testCount - passedTests}`);

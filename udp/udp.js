@@ -22,8 +22,8 @@ function Encode(srcIp, destIp, srcPort, destPort, data = Buffer.alloc(0)) {
     header.writeUInt16BE(8 + data.length, 4);
 
     // Build pseudo-header for checksum and calculate UDP checksum
-    const psudoHeader = buildPseudoHeader(srcIp, destIp, 8 + data.length);
-    const checkSum = calculateChecksum(psudoHeader, header, data);
+    const psuedoHeader = buildPseudoHeader(srcIp, destIp, 8 + data.length);
+    const checkSum = calculateChecksum(psuedoHeader, header, data);
 
     // Write checksum to header
     header.writeUInt16BE(checkSum, 6);
@@ -65,4 +65,9 @@ function Decode(udpPacket, skipIPHeader = false) {
 
 
 
-module.exports = { Encode, Decode };
+module.exports = {
+    Encode,
+    Decode,
+    psuedoHeader: buildPseudoHeader,
+    checksum: calculateChecksum
+};
