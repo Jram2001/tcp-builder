@@ -1,0 +1,1 @@
+console.log((0xfff0 | 0xf).toString(2));
