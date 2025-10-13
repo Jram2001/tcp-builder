@@ -11,7 +11,7 @@ const { validateRestOfHeader, calculateIcmpChecksum } = require('./util')
  * @param {Buffer} data - Optional payload data
  * @returns {Buffer} - Complete ICMP message ready for transmission
  */
-function EncodeRAW(type, code, identifier = 0, sequence = 0, data = Buffer.alloc(0)) {
+function Encode(type, code, identifier = 0, sequence = 0, data = Buffer.alloc(0)) {
     const header = Buffer.alloc(8 + data.length);
 
     header[0] = type;
@@ -46,7 +46,7 @@ function Decode(packet) {
     return output;
 }
 
-function Encode(type , code){
+function Encode(type, code) {
 
 }
 
