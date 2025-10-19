@@ -1,6 +1,6 @@
 {
     "name": "protocol-builder",
-    "version": "1.6.2",
+    "version": "2.6.2",
     "main": "index.js",
     "description": "Multi-protocol packet builder for network analysis, OS detection, and security research",
     "keywords": [
