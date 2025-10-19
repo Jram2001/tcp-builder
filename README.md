@@ -1,247 +1,304 @@
-# TCP Packet Builder
+# Netcraft.js
 
-A comprehensive Node.js library for building and parsing custom TCP packets with advanced options support. Designed for network security research, OS fingerprinting, and protocol analysis.
+A comprehensive Node.js library for building and parsing network packets across multiple protocols. Designed for network security research, OS fingerprinting, protocol analysis, and educational purposes.
 
 ## Features
 
-- **Complete TCP packet encoding/decoding** with proper checksum calculation
-- **Advanced TCP options support** including MSS, Window Scale, SACK, and Timestamps
-- **Pre-built probe configurations** for OS detection (Nmap-style probes)
-- **Protocol-compliant** implementation following RFC 793 and related standards
-- **Zero dependencies** - pure Node.js implementation
+- **Multi-Protocol Support**: TCP, UDP, DNS, ARP, ICMP, IPv4, IPv6, and TLS packet crafting
+- **Advanced TCP Options**: Complete support for MSS, Window Scale, SACK, Timestamps, and custom options
+- **OS Detection Probes**: Pre-built Nmap-style probe configurations for fingerprinting
+- **Protocol Compliance**: RFC-compliant implementations across all supported protocols
+- **Zero Dependencies**: Pure Node.js implementation with built-in modules only
+- **Educational Focus**: Clean, readable code perfect for learning network protocols
+
+---
 
 ## Installation
 
 ```bash
-npm install tcp-builder
+npm install netcraft-js
 ```
 
 Or clone this repository:
+
 ```bash
 git clone https://github.com/Jram2001/tcp-builder.git
 cd tcp-builder
 ```
 
+---
+
 ## Quick Start
 
 ```javascript
-const TCP = require('tcp-builder');
+const netcraft = require('netcraft-js');
 
-// Create a basic SYN packet
-const synPacket = TCP.Encode(
-    '192.168.1.10',    // Source IP
-    '192.168.1.20',    // Destination IP
-    40000,             // Source Port
-    80,                // Destination Port
-    123456,            // Sequence Number
-    0,                 // Acknowledgment Number
-    { syn: true },     // Flags
-    65535,             // Window Size
-    0,                 // Urgent Pointer
-    Buffer.alloc(0),   // Options
-    Buffer.alloc(0)    // Data
-);
-
-console.log('Packet hex:', synPacket.toString('hex'));
-
-// Decode the packet
-const decoded = TCP.Decode(synPacket);
-console.log('Decoded:', decoded);
-```
-
-## API Reference
-
-### TCP.Encode(srcIp, destIp, srcPort, destPort, seqNumber, ackNumber, flags, windowSize, urgentPointer, options, data)
-
-Builds a complete TCP packet with proper header structure and checksum.
-
-**Parameters:**
-- `srcIp` (string): Source IP address for checksum calculation
-- `destIp` (string): Destination IP address for checksum calculation  
-- `srcPort` (number): Source port number (0-65535)
-- `destPort` (number): Destination port number (0-65535)
-- `seqNumber` (number): Sequence number (32-bit, default: 0)
-- `ackNumber` (number): Acknowledgment number (32-bit, default: 0)
-- `flags` (object): TCP flags object with boolean properties:
-  - `fin`: Connection termination
-  - `syn`: Synchronize sequence numbers
-  - `rst`: Reset connection
-  - `psh`: Push data to application
-  - `ack`: Acknowledgment field valid
-  - `urg`: Urgent pointer valid
-  - `ece`: ECN Echo
-  - `cwr`: Congestion Window Reduced
-- `windowSize` (number): Receive window size (16-bit, default: 65535)
-- `urgentPointer` (number): Urgent pointer (16-bit, default: 0)
-- `options` (Buffer): TCP options (variable length)
-- `data` (Buffer): Payload data
-
-**Returns:** Buffer containing the complete TCP packet
-
-### TCP.Decode(packet, skipIPHeader)
-
-Parses a TCP packet and extracts all header fields.
-
-**Parameters:**
-- `packet` (Buffer): TCP packet buffer to decode
-- `skipIPHeader` (boolean): If true, skips first 20 bytes (IP header)
-
-**Returns:** Object containing:
-- `sourcePort`: Source port number
-- `destinationPort`: Destination port number
-- `sequenceNumber`: Sequence number
-- `acknowledgmentNumber`: Acknowledgment number
-- `dataOffset`: Header length in 32-bit words
-- `flags`: Array of active flag names
-- `windowSize`: Window size value
-- `checksum`: Checksum value
-- `urgentPointer`: Urgent pointer value
-- `options`: Array of parsed option objects
-- `dataPayload`: Data payload buffer
-
-## TCP Options
-
-### Available Option Builders
-
-```javascript
-const { OptionBuilders } = require('tcp-builder');
-
-// Maximum Segment Size
-const mssOption = OptionBuilders.optMSS(1460);
-
-// Window Scale
-const windowScale = OptionBuilders.optWScale(7);
-
-// SACK Permitted
-const sackPermitted = OptionBuilders.optSACK();
-
-// Timestamps
-const timestamp = OptionBuilders.optTimestamp(0xFFFFFFFF, 0);
-
-// No Operation (padding)
-const nop = OptionBuilders.optNOP();
-
-// End of Options List
-const eol = OptionBuilders.optEOL();
-
-// Combine options with proper padding
-const options = OptionBuilders.optPadding(
-    Buffer.concat([mssOption, windowScale, sackPermitted, timestamp])
-);
-```
-
-### Option Types Supported
-
-| Option | Kind | Description | RFC |
-|--------|------|-------------|-----|
-| EOL | 0 | End of Option List | 793 |
-| NOP | 1 | No Operation (padding) | 793 |
-| MSS | 2 | Maximum Segment Size | 793 |
-| WScale | 3 | Window Scale | 7323 |
-| SACK | 4 | SACK Permitted | 2018 |
-| Timestamps | 8 | Timestamp Option | 7323 |
-
-## Pre-built Probe Configurations
-
-The library includes pre-configured probe options for OS detection:
-
-```javascript
-const { Probes } = require('tcp-builder');
-
-// Nmap-style probes
-const t1Packet = TCP.Encode(
-    '192.168.1.10', '192.168.1.20', 40000, 80,
-    123456, 0, { syn: true }, 65535, 0,
-    Probes.T1options,  // Pre-built T1 probe options
+// TCP SYN packet with advanced options
+const tcpPacket = netcraft.tcp.Encode(
+    '192.168.1.10', '192.168.1.20', 
+    40000, 80, 123456, 0,
+    { syn: true }, 65535, 0,
+    netcraft.optionBuilder.Probes.T1options,
     Buffer.alloc(0)
 );
 
-// Available probe types:
-// T1options - T7options: Standard Nmap TCP probes
-// ECNoptions: ECN probe configuration
-// MSSonly, WSCALEonly, SACKonly: Single option probes
-// LINUXprobe, WINDOWSprobe, BSDprobe: OS-specific probes
+// DNS query packet
+const dnsQuery = netcraft.dns.buildQuery(
+    'example.com', 'A', 1, 0x1234
+);
+
+// ARP request
+const arpRequest = netcraft.arp.buildRequest(
+    '192.168.1.1', '00:11:22:33:44:55',
+    '192.168.1.100', '00:00:00:00:00:00'
+);
+
+console.log('TCP packet:', tcpPacket.toString('hex'));
 ```
 
-## Advanced Examples
+---
 
-### Custom SYN Packet with Options
+## Protocol Support
+
+### TCP (Transmission Control Protocol)
+
+Complete TCP packet crafting with advanced options support for OS fingerprinting and security research.
 
 ```javascript
-const { OptionBuilders } = require('tcp-builder');
+const { tcp, optionBuilder } = require('netcraft-js');
 
-// Build custom options
-const options = OptionBuilders.optPadding(Buffer.concat([
-    OptionBuilders.optMSS(1460),
-    OptionBuilders.optWScale(7),
-    OptionBuilders.optSACK(),
-    OptionBuilders.optTimestamp()
+// Custom SYN packet with MSS and Window Scale
+const options = optionBuilder.optPadding(Buffer.concat([
+    optionBuilder.optMSS(1460),
+    optionBuilder.optWScale(7),
+    optionBuilder.optSACK(),
+    optionBuilder.optTimestamp()
 ]));
 
-const packet = TCP.Encode(
+const packet = tcp.Encode(
     '10.0.0.1', '10.0.0.2', 12345, 443,
     1000000, 0, { syn: true }, 29200, 0,
     options, Buffer.alloc(0)
 );
+
+// Decode captured packets
+const decoded = tcp.Decode(packet);
+console.log('Parsed:', decoded);
 ```
 
-### TCP Packet with Data Payload
+### DNS (Domain Name System)
+
+Build and parse DNS queries and responses for various record types.
 
 ```javascript
-const data = Buffer.from('GET / HTTP/1.1\r\nHost: example.com\r\n\r\n');
+const { dns } = require('netcraft-js');
 
-const packet = TCP.Encode(
-    '192.168.1.100', '93.184.216.34', 54321, 80,
-    2000000, 1000000, { psh: true, ack: true }, 65535, 0,
-    Buffer.alloc(0), data
+// A record query
+const aQuery = dns.buildQuery('google.com', 'A', 1, 0x1234);
+
+// MX record query
+const mxQuery = dns.buildQuery('example.org', 'MX', 1, 0x5678);
+
+// Parse DNS responses
+const response = dns.parseResponse(responseBuffer);
+```
+
+### ARP (Address Resolution Protocol)
+
+Create ARP requests and responses for network discovery and analysis.
+
+```javascript
+const { arp } = require('netcraft-js');
+
+// ARP request (who-has)
+const request = arp.buildRequest(
+    '192.168.1.1', '00:11:22:33:44:55',  // Sender IP/MAC
+    '192.168.1.100', '00:00:00:00:00:00' // Target IP/MAC
+);
+
+// ARP response (is-at)
+const response = arp.buildResponse(
+    '192.168.1.100', 'aa:bb:cc:dd:ee:ff', // Sender IP/MAC
+    '192.168.1.1', '00:11:22:33:44:55'   // Target IP/MAC
 );
 ```
 
-### Decoding Captured Packets
+### ICMP (Internet Control Message Protocol)
+
+Generate ICMP packets for ping, traceroute, and network diagnostics.
 
 ```javascript
-// Assuming you have a raw TCP packet buffer
-const rawPacket = Buffer.from('504f...', 'hex');
-const parsed = TCP.Decode(rawPacket);
+const { icmp } = require('netcraft-js');
 
-console.log('Source Port:', parsed.sourcePort);
-console.log('Flags:', parsed.flags);
-console.log('Options:', parsed.options);
+// Echo request (ping)
+const pingPacket = icmp.buildEchoRequest(1, 1, Buffer.from('Hello'));
+
+// Destination unreachable
+const unreachable = icmp.buildDestUnreachable(3, originalPacket);
 ```
 
-## Checksum Calculation
+### IPv4 and IPv6
 
-The library automatically calculates proper TCP checksums using the pseudo-header approach:
+Low-level IP packet construction for custom protocol implementations.
 
 ```javascript
-const { TCPChecksum } = require('tcp-builder');
+const { ipv4, ipv6 } = require('netcraft-js');
 
-// Manual checksum calculation (usually not needed)
-const checksum = TCPChecksum('192.168.1.1', '192.168.1.2', tcpSegmentBuffer);
+// IPv4 packet
+const ipv4Packet = ipv4.buildPacket(
+    '192.168.1.1', '192.168.1.2', 
+    6, tcpPayload // Protocol 6 = TCP
+);
+
+// IPv6 packet  
+const ipv6Packet = ipv6.buildPacket(
+    '2001:db8::1', '2001:db8::2',
+    6, tcpPayload
+);
 ```
 
-## Protocol Compliance
+### UDP (User Datagram Protocol)
 
-- **RFC 793**: Transmission Control Protocol specification
-- **RFC 2018**: SACK (Selective Acknowledgment) support
-- **RFC 7323**: TCP Extensions for High Performance (Window Scale, Timestamps)
-- **Network byte order**: All multi-byte fields use big-endian encoding
-- **Proper padding**: TCP options are automatically padded to 4-byte boundaries
+Simple UDP packet construction for connectionless protocols.
+
+```javascript
+const { udp } = require('netcraft-js');
+
+const udpPacket = udp.Encode(
+    '192.168.1.1', '192.168.1.2',
+    53, 12345, dnsQuery
+);
+```
+
+### TLS Analysis
+
+Tools for analyzing TLS handshakes and certificate information.
+
+```javascript
+const { tls } = require('netcraft-js');
+
+// Parse TLS handshake messages
+const handshake = tls.parseHandshake(tlsBuffer);
+const certificates = tls.extractCertificates(handshake);
+```
+
+---
+
+## Advanced Features
+
+### OS Fingerprinting Probes
+
+Pre-configured TCP option combinations used by Nmap for OS detection:
+
+```javascript
+const { optionBuilder } = require('netcraft-js');
+
+// Nmap T1-T7 probes
+const probes = [
+    optionBuilder.Probes.T1options,
+    optionBuilder.Probes.T2options,
+    optionBuilder.Probes.T3options,
+    // ... T4-T7
+    optionBuilder.Probes.ECNoptions
+];
+
+// OS-specific signatures
+const linuxProbe = optionBuilder.Probes.LINUXprobe;
+const windowsProbe = optionBuilder.Probes.WINDOWSprobe;
+```
+
+### Custom TCP Options
+
+Build complex TCP option combinations:
+
+```javascript
+const { optionBuilder } = require('netcraft-js');
+
+const customOptions = Buffer.concat([
+    optionBuilder.optMSS(1460),
+    optionBuilder.optNOP(),
+    optionBuilder.optWScale(8),
+    optionBuilder.optNOP(),
+    optionBuilder.optSACK(),
+    optionBuilder.optTimestamp(0x12345678, 0x87654321),
+    optionBuilder.optEOL()
+]);
+```
+
+---
 
 ## Use Cases
 
-- **Network security research**: Custom packet crafting for vulnerability testing
-- **OS fingerprinting**: Using probe configurations to identify remote systems
-- **Protocol analysis**: Building test packets for network protocol research
-- **Traffic simulation**: Generating realistic TCP traffic patterns
-- **Educational purposes**: Understanding TCP packet structure and options
+### Network Security Research
 
-## Important Notes
+- Custom packet crafting for vulnerability testing
+- Protocol fuzzing and edge case analysis
+- Firewall and IDS evasion technique development
 
-1. **Privileges Required**: Sending raw TCP packets typically requires root/administrator privileges
-2. **Checksum Validation**: Checksums are calculated over pseudo-header + TCP segment
-3. **Option Padding**: TCP options are automatically padded to maintain 32-bit alignment
-4. **Buffer Management**: All inputs/outputs use Node.js Buffer objects for binary data
+### OS Fingerprinting
+
+- Active OS detection using TCP/IP stack differences
+- Service version detection through protocol analysis
+- Network asset discovery and enumeration
+
+### Protocol Analysis
+
+- Educational protocol dissection and learning
+- Custom protocol development and testing
+- Network troubleshooting and diagnostics
+
+### Traffic Simulation
+
+- Realistic network traffic generation
+- Load testing and performance analysis
+- Network behavior modeling
+
+---
+
+## Technical Details
+
+### Checksum Calculation
+
+All protocols implement proper checksum calculation following their respective RFCs:
+
+```javascript
+const { tcp } = require('netcraft-js');
+
+// Automatic TCP checksum with pseudo-header
+const checksum = tcp.TCPChecksum('192.168.1.1', '192.168.1.2', tcpSegment);
+```
+
+### Buffer Management
+
+All packet operations use Node.js Buffer objects for efficient binary data handling:
+
+```javascript
+// Packet building returns Buffer objects
+const packet = tcp.Encode(/* parameters */); // Returns Buffer
+const parsed = tcp.Decode(packet);          // Accepts Buffer input
+```
+
+### Protocol Compliance
+
+- **RFC 793**: TCP specification compliance
+- **RFC 768**: UDP specification
+- **RFC 1035**: DNS message format
+- **RFC 826**: ARP protocol
+- **RFC 792**: ICMP specification
+- **RFC 2460**: IPv6 specification
+- Network byte order (big-endian) for all multi-byte fields
+
+---
+
+## Installation & Dependencies
+
+This library requires Node.js and has zero external dependencies, using only built-in modules:
+
+- `buffer` - Binary data manipulation
+- `crypto` - Checksum calculations
+- No external packages required
+
+---
 
 ## Testing
 
@@ -249,35 +306,54 @@ const checksum = TCPChecksum('192.168.1.1', '192.168.1.2', tcpSegmentBuffer);
 node test.js
 ```
 
-Example test output:
-```
-Decoded fields: {
-  sourcePort: 40000,
-  destinationPort: 80,
-  sequenceNumber: 123456,
-  acknowledgmentNumber: 0,
-  dataOffset: 5,
-  flags: [ 'SYN' ],
-  windowSize: 65535,
-  checksum: 44449,
-  urgentPointer: 0,
-  options: [],
-  dataPayload: <Buffer >
-}
-```
+Example test scenarios:
+
+- Packet encoding/decoding round-trips
+- Checksum validation across protocols
+- Option parsing correctness
+- Cross-protocol integration
+
+---
+
+## Important Notes
+
+- **Privileges**: Raw packet transmission requires root/administrator privileges
+- **Legal Use**: Only use for authorized testing and educational purposes
+- **Network Impact**: Be mindful of generated traffic on production networks
+- **Compliance**: Ensure usage complies with local laws and network policies
+
+---
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Add comprehensive tests for new functionality
+4. Ensure all existing tests pass
+5. Follow existing code style and documentation patterns
+6. Submit a pull request with detailed description
+
+---
 
 ## License
 
 MIT License - see LICENSE file for details.
 
-## Contributing
+---
 
-1. Fork the repository
-2. Create a feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+## Version History
 
-## Dependencies
+- **v2.6.2**: Multi-protocol support with DNS, ARP, ICMP, IPv6, UDP, TLS
+- **v1.x**: TCP-only packet builder with basic options support
 
-This library has zero external dependencies and uses only Node.js built-in modules.
+---
+
+## Author
+
+Built by a full-stack developer transitioning into cybersecurity, focused on creating educational tools for network protocol understanding and security research.
+
+---
+
+## Disclaimer
+
+This tool is intended for educational purposes, authorized security testing, and network research only. Users are responsible for ensuring compliance with applicable laws and obtaining proper authorization before use.

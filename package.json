@@ -1,24 +1,23 @@
 {
-    "name": "protocol-builder",
+    "name": "netcraft-js",
     "version": "2.6.2",
     "main": "index.js",
-    "description": "Multi-protocol packet builder for network analysis, OS detection, and security research",
+    "description": "JavaScript network protocol crafting library for security research and network analysis",
     "keywords": [
-        "networking",
-        "packet-builder",
-        "protocol-analysis",
+        "network-crafting",
+        "protocol-builder",
+        "packet-construction",
         "tcp",
         "dns",
         "arp",
         "tls",
-        "ipv4",
         "ipv6",
         "icmp",
-        "network-security",
-        "packet-crafting",
-        "nmap",
-        "os-fingerprinting",
-        "nodejs",
-        "network-tools"
+        "security-tools",
+        "network-analysis",
+        "packet-parser",
+        "cybersecurity",
+        "penetration-testing",
+        "nodejs"
     ]
 }
