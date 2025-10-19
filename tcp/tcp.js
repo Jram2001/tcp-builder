@@ -1,4 +1,4 @@
-const { optPadding } = require("./option-bulder");
+const { optPadding } = require("../option-bulder");
 const { tcpCheckSum } = require("./tcp-checksum");
 /**
  * Builds a complete TCP packet with proper header structure and checksum
@@ -246,7 +246,7 @@ function processOptions(optionsArray) {
 module.exports = {
     Encode,
     Decode,
-    OptionBuilders: require('./option-bulder'),
+    OptionBuilders: require('../option-bulder'),
     Probes: require('./tcp-option-probes'),
     TCPChecksum: require('./tcp-checksum')
 };

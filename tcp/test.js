@@ -2,7 +2,7 @@
 // Comprehensive testing of all functionality
 
 const TCP = require('./tcp');
-const OptionBuilders = require('./option-bulder');
+const OptionBuilders = require('../option-bulder');
 const Probes = require('./tcp-option-probes');
 const TCPChecksum = require('./tcp-checksum');
 

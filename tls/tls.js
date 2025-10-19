@@ -1,4 +1,4 @@
-const tcp = require('../tcp');
+const tcp = require('../tcp/tcp');
 
 function Encode(srcIp, destIp, seqNum = 0, ackNum = 0, contentType, protocolVersion, payload) {
     // Step 1: Build TLS record

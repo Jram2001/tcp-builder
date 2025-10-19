@@ -3,7 +3,7 @@
  * Simple arrays of TCP options for each probe
  */
 
-const { optEOL, optNOP, optMSS, optWScale, optSACK, optTimestamp, optPadding } = require('./option-bulder');
+const { optEOL, optNOP, optMSS, optWScale, optSACK, optTimestamp, optPadding } = require('../option-bulder');
 
 // T1 Probe - SYN to open port
 const T1_options = optPadding(Buffer.concat([
