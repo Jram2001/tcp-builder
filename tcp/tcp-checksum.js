@@ -8,7 +8,6 @@
 function ipToBuffer(ip) {
     // Split IP by dots and convert each octet to integer
     // FIXED: parseInt is a global function, not a method of string
-    console.log(ip, 'ip');
     return Buffer.from(ip.split('.').map(n => parseInt(n, 10)));
 }
 /**

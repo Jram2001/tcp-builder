@@ -1,6 +1,6 @@
 {
     "name": "netcraft-js",
-    "version": "2.6.2",
+    "version": "2.6.4",
     "main": "index.js",
     "description": "JavaScript network protocol crafting library for security research and network analysis",
     "keywords": [
