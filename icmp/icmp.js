@@ -23,7 +23,7 @@ function Encode(type, code, identifier = 0, sequence = 0, data = Buffer.alloc(0)
     if (data.length > 0) data.copy(header, 8);
 
     header.writeUInt16BE(calculateIcmpChecksum(header), 2); // Fill checksum
-
+    console.log(header, 'HEader')
     return header;
 }
 
@@ -46,8 +46,5 @@ function Decode(packet) {
     return output;
 }
 
-function Encode(type, code) {
-
-}
 
 module.exports = { Encode, Decode };
