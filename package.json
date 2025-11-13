@@ -19,5 +19,16 @@
         "cybersecurity",
         "penetration-testing",
         "nodejs"
-    ]
+    ],
+    "scripts": {
+        "test": "node arp/test.js && node dns/test.js && node icmp/test.js && node ipv4/test.js && node ipv6/test.js && node tcp/test.js && node tls/test.js && node udp/test.js",
+        "test:arp": "node arp/test.js",
+        "test:dns": "node dns/test.js",
+        "test:icmp": "node icmp/test.js",
+        "test:ipv4": "node ipv4/test.js",
+        "test:ipv6": "node ipv6/test.js",
+        "test:tcp": "node tcp/test.js",
+        "test:tls": "node tls/test.js",
+        "test:udp": "node udp/test.js"
+    }
 }
