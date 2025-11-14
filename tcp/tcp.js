@@ -37,6 +37,11 @@ function Encode(
     options = Buffer.alloc(0), // TCP options (variable length)
     data = Buffer.alloc(0)     // Payload data
 ) {
+
+    if (!isValidIP(srcIp) || !isValidIP(destIp)) {
+        console.warn("Invalid source or destination address", destIp, srcIp)
+        return Buffer.alloc([]);
+    }
     // STEP 1: Prepare options with proper padding
     // TCP options must be padded to ensure header length is multiple of 4 bytes
     // This is required because the data offset field counts in 32-bit words
@@ -92,6 +97,7 @@ function Encode(
     // STEP 8: Calculate and insert checksum
     // TCP checksum covers: pseudo-header + TCP header + TCP data
     // Pseudo-header includes: src IP, dest IP, protocol (6), TCP length
+
     let checksum = tcpCheckSum(srcIp, destIp, tcpSegmentTemp);
     // CRITICAL: Checksum goes at offset 16, NOT 20 (20 is where options start)
     header.writeUInt16BE(checksum, 16);
@@ -104,10 +110,22 @@ function Encode(
 }
 
 function Decode(packet, skipIPHeader = false) {
+
+    if (!Buffer.isBuffer(packet)) {
+        console.warn("Packet must be a Buffer");
+        return Buffer.alloc([]);
+    }
+
+
     let output = {};
 
     // If packet includes IP header, skip first 20 bytes
     let tcpStart = skipIPHeader ? 20 : 0;
+
+    if (packet.length < tcpStart + 20) {
+        console.warn("Tcp packet is too small");
+        return Buffer.alloc([]);
+    }
 
     // Bytes 0-1: Source Port
     output.sourcePort = packet.readUInt16BE(tcpStart + 0);
@@ -123,6 +141,18 @@ function Decode(packet, skipIPHeader = false) {
 
     // Byte 12: Data Offset (upper 4 bits) + Reserved (lower 4 bits)
     const dataOffsetAndReserved = packet.readUInt8(tcpStart + 12);
+    const dataOffset = (dataOffsetAndReserved >> 4) & 0x0F;
+    const dataReserved = dataOffsetAndReserved & 0x04;
+
+    if (dataReserved != 0) {
+        console.warn("Non zero reserved bit found");
+        return Buffer.alloc([]);
+    }
+
+    if (!isValidDataOffset(dataOffset, packet.length - (skipIPHeader ? 20 : 0))) {
+        return Buffer.alloc([]);
+    }
+
     output.dataOffset = (dataOffsetAndReserved >> 4) & 0x0F; // In 32-bit words
 
     // Byte 13: Flags
@@ -151,7 +181,6 @@ function Decode(packet, skipIPHeader = false) {
 
     // Data payload starts after the TCP header
     output.dataPayload = packet.slice(tcpStart + headerLength);
-
     return output;
 }
 
@@ -162,6 +191,12 @@ function processFlags(flagBits) {
 }
 
 function processOptions(optionsArray) {
+
+    if (!Buffer.isBuffer(optionsArray)) {
+        console.warn("Options must be a Buffer");
+        return [];
+    }
+
     const options = [];
     let i = 0;
 
@@ -177,7 +212,36 @@ function processOptions(optionsArray) {
         15: 'AltChkSumData' // Alternate Checksum Data
     };
 
+
+    // Minimum valid lengths for each option type
+    const minLengths = {
+        2: 4,   // MSS: kind(1) + length(1) + value(2)
+        3: 3,   // Window Scale: kind(1) + length(1) + shift(1)
+        4: 2,   // SACK-Permitted: kind(1) + length(1)
+        5: 10,  // SACK: kind(1) + length(1) + min 1 block(8)
+        8: 10,  // Timestamps: kind(1) + length(1) + TSval(4) + TSecr(4)
+        14: 3,  // AltChkSum: kind(1) + length(1) + algorithm(1)
+        15: 2   // AltChkSumData: kind(1) + length(1) + data(variable)
+    };
+
+    // Maximum valid lengths (prevent excessive allocation)
+    const maxLengths = {
+        2: 4,   // MSS is always 4 bytes
+        3: 3,   // Window Scale is always 3 bytes
+        4: 2,   // SACK-Permitted is always 2 bytes
+        5: 34,  // SACK: max 4 blocks = 2 + (4 × 8)
+        8: 10,  // Timestamps is always 10 bytes
+        14: 3,  // AltChkSum is always 3 bytes
+        15: 40  // AltChkSumData: max remaining option space
+    };
+
     while (i < optionsArray.length) {
+
+        // CHECK 1: Prevent reading past buffer when accessing kind byte
+        if (i >= optionsArray.length) {
+            break;
+        }
+
         const kind = optionsArray[i];
 
         // EOL - End of options
@@ -193,9 +257,29 @@ function processOptions(optionsArray) {
             continue;
         }
 
+        // CHECK 2: Ensure length byte exists
+        if (i + 1 >= optionsArray.length) {
+            console.warn(`Malformed TCP options: option kind ${kind} at position ${i} has no length byte`);
+            break;
+        }
+
         // All other options have length field
         if (i + 1 < optionsArray.length) {
+
             const length = optionsArray[i + 1];
+
+            const isMalformed = checkMalformedLength(kind, length, minLengths, maxLengths, i, optionsArray.length, optionTypes);
+
+            if (isMalformed) {
+                return []; // Return empty instead of process.exit()
+            }
+
+            const endIndex = i + length;
+            if (endIndex > optionsArray.length) {
+                console.warn("Option extends beyond buffer bounds");
+                return [];
+            }
+
             const data = optionsArray.slice(i + 2, i + length);
 
             options.push({
@@ -212,6 +296,86 @@ function processOptions(optionsArray) {
     }
 
     return options;
+}
+
+function checkMalformedLength(kind, length, minLengths, maxLengths, currentIndex, optionsArrayLength, optionTypes) {
+
+    if (!optionTypes[kind] && length > 40) {
+        console.warn(`Malformed TCP options: unknown option kind ${kind} has excessive length ${length}`);
+        return true;
+    }
+
+    // CHECK 3: Length must be at least 2 (kind + length bytes)
+    if (length < 2) {
+        console.warn(`Malformed TCP options: option kind ${kind} has invalid length ${length} (minimum is 2)`);
+        return true;
+    }
+
+    // CHECK 4: Validate minimum length for known option types
+    if (minLengths[kind] && length < minLengths[kind]) {
+        console.warn(`Malformed TCP options: option kind ${kind} has length ${length}, expected minimum ${minLengths[kind]}`);
+        return true;
+    }
+
+    // CHECK 5: Validate maximum length for known option types
+    if (maxLengths[kind] && length > maxLengths[kind]) {
+        console.warn(`Malformed TCP options: option kind ${kind} has length ${length}, expected maximum ${maxLengths[kind]}`);
+        return true;
+    }
+
+    // CHECK 6: Length must not exceed remaining buffer (FIXED)
+    if (currentIndex + length > optionsArrayLength) {
+        console.warn(`Malformed TCP options: option kind ${kind} claims length ${length} but only ${optionsArrayLength - currentIndex} bytes remain`);
+        return true;
+    }
+
+    // CHECK 7: For unknown options, cap length to prevent DoS
+    if (!optionTypes[kind] && length > 40) {
+        console.warn(`Malformed TCP options: unknown option kind ${kind} has excessive length ${length}`);
+        return true;
+    }
+
+    // CHECK 8: SACK-specific validation
+    if (kind === 5 && (length - 2) % 8 !== 0) {
+        console.warn(`Malformed TCP options: SACK option has invalid length ${length} (must be 2 + 8n bytes)`);
+        return true;
+    }
+
+    return false;
+}
+
+function isValidDataOffset(dataOffset, packetLength) {
+    const headerLength = dataOffset * 4;
+
+    // Range check (5–15)
+    if (headerLength < 20 || headerLength > 60) {
+        console.warn(`Malformed data offset found ${dataOffset}`);
+        return false;
+    }
+
+    // Packet must be at least header length
+    if (packetLength < headerLength) {
+        console.warn(`Packet too small for header length ${headerLength}`);
+        return false;
+    }
+
+    return true;
+}
+
+function isValidIP(IPaddress) {
+    const ip = IPaddress.split('.').map(n => parseInt(n));
+
+    if (ip.length !== 4) {
+        return false;
+    }
+
+    const isValidNode = ip.some(n =>
+        Number.isNaN(n) ||   // check NaN
+        n < 0 ||             // no negatives
+        n > 255              // must be <= 255
+    );
+
+    return !isValidNode;
 }
 
 // Example usage:

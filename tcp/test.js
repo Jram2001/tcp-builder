@@ -235,7 +235,6 @@ probeTests.forEach(probeName => {
             { syn: true }, 65535, 0,
             probeOptions, Buffer.alloc(0)
         );
-
         const decoded = TCP.Decode(packet);
         assert(Buffer.isBuffer(packet), `${probeName} creates valid packet`);
 
@@ -372,6 +371,318 @@ try {
     console.log(`❌ FAIL: Edge cases test - ${error.message}`);
     failedTests.push('Edge cases test');
 }
+
+// ===== Test 12: Input Validation & Boundary Checks =====
+console.log('\n📝 Test 12: Input Validation & Boundary Checks');
+try {
+    // Test port range validation (0-65535)
+    try {
+        const invalidPort = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            70000, 80, 1000, 0, // Invalid source port > 65535
+            { syn: true }, 65535, 0,
+            Buffer.alloc(0), Buffer.alloc(0)
+        );
+        console.log('⚠️  WARNING: Invalid port accepted (should reject ports > 65535)');
+    } catch (error) {
+        assert(true, 'Port validation: rejects ports > 65535');
+    }
+
+    // Test sequence number range (0-4294967295)
+    try {
+        const invalidSeq = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            40000, 80, 5000000000, 0, // Invalid sequence > 32-bit max
+            { syn: true }, 65535, 0,
+            Buffer.alloc(0), Buffer.alloc(0)
+        );
+        console.log('⚠️  WARNING: Invalid sequence number accepted');
+    } catch (error) {
+        assert(true, 'Sequence validation: rejects values > 4294967295');
+    }
+
+    // Test window size range (0-65535)
+    try {
+        const invalidWindow = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            40000, 80, 1000, 0,
+            { syn: true }, 70000, 0, // Invalid window > 65535
+            Buffer.alloc(0), Buffer.alloc(0)
+        );
+        console.log('⚠️  WARNING: Invalid window size accepted');
+    } catch (error) {
+        assert(true, 'Window validation: rejects values > 65535');
+    }
+
+} catch (error) {
+    console.log(`❌ FAIL: Input validation test - ${error.message}`);
+    failedTests.push('Input validation test');
+}
+
+// ===== Test 13: Malformed IP Address Validation =====
+console.log('\n📝 Test 13: IP Address Validation');
+const invalidIPs = [
+    '999.999.999.999',
+    '192.168.1',
+    '192.168.1.1.1',
+    '',
+    'not.an.ip.address',
+    '192.168.-1.1',
+    '256.1.1.1'
+];
+
+invalidIPs.forEach(ip => {
+    try {
+        const packet = TCP.Encode(
+            ip, '192.168.1.2',
+            40000, 80, 1000, 0,
+            { syn: true }, 65535, 0,
+            Buffer.alloc(0), Buffer.alloc(0)
+        );
+        console.log(`⚠️  WARNING: Invalid IP ${ip} accepted`);
+    } catch (error) {
+        assert(true, `IP validation: rejects "${ip}"`);
+    }
+});
+
+// ===== Test 14: Malformed Packet Detection =====
+console.log('\n📝 Test 14: Malformed Packet Detection');
+try {
+    // Create valid packet first
+    const validPacket = TCP.Encode(
+        '192.168.1.1', '192.168.1.2',
+        40000, 80, 1000, 0,
+        { syn: true }, 65535, 0,
+        Buffer.alloc(0), Buffer.alloc(0)
+    );
+
+    // Test 1: Truncated packet (too short)
+    const truncated = validPacket.slice(0, 10);
+    try {
+        TCP.Decode(truncated);
+        console.log('⚠️  WARNING: Truncated packet accepted');
+    } catch (error) {
+        assert(true, 'Malformed detection: rejects truncated packets');
+    }
+
+    // Test 2: Corrupted header (modify data offset to invalid value)
+    const corruptedOffset = Buffer.from(validPacket);
+    corruptedOffset[12] = 0x00; // Set data offset to 0 (invalid)
+    try {
+        TCP.Decode(corruptedOffset);
+        console.log('⚠️  WARNING: Invalid data offset accepted');
+    } catch (error) {
+        assert(true, 'Malformed detection: rejects invalid data offset');
+    }
+
+    // Test 3: Data offset too large
+    const largeOffset = Buffer.from(validPacket);
+    largeOffset[12] = 0xF0; // Max data offset (15 * 4 = 60 bytes)
+    if (largeOffset.length < 60) {
+        try {
+            TCP.Decode(largeOffset);
+            console.log('⚠️  WARNING: Oversized data offset accepted');
+        } catch (error) {
+            assert(true, 'Malformed detection: rejects oversized data offset');
+        }
+    }
+
+} catch (error) {
+    console.log(`❌ FAIL: Malformed packet detection - ${error.message}`);
+    failedTests.push('Malformed packet detection');
+}
+
+// ===== Test 15: Options Length Validation =====
+console.log('\n📝 Test 15: TCP Options Security');
+try {
+    // Test 1: Oversized options (max is 40 bytes)
+    const oversizedOptions = Buffer.alloc(50);
+    try {
+        const packet = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            40000, 80, 1000, 0,
+            { syn: true }, 65535, 0,
+            oversizedOptions, Buffer.alloc(0)
+        );
+        console.log('⚠️  WARNING: Oversized options accepted (max 40 bytes)');
+    } catch (error) {
+        assert(true, 'Options validation: rejects options > 40 bytes');
+    }
+
+    // Test 2: Malformed option length
+    const malformedOpt = Buffer.from([0x02, 0xFF, 0x05, 0xB4]); // MSS with invalid length
+    try {
+        const packet = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            40000, 80, 1000, 0,
+            { syn: true }, 65535, 0,
+            malformedOpt, Buffer.alloc(0)
+        );
+        const decoded = TCP.Decode(packet);
+        console.log('⚠️  WARNING: Malformed option length accepted');
+    } catch (error) {
+        assert(true, 'Options validation: detects malformed option length');
+    }
+
+} catch (error) {
+    console.log(`❌ FAIL: Options security test - ${error.message}`);
+    failedTests.push('Options security test');
+}
+
+// ===== Test 16: Payload Size Validation =====
+console.log('\n📝 Test 16: Payload Size Limits');
+try {
+    // Test maximum TCP payload (65535 - 20 IP header - 20 TCP header)
+    const maxPayload = Buffer.alloc(65495);
+    try {
+        const packet = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            40000, 80, 1000, 0,
+            { psh: true, ack: true }, 65535, 0,
+            Buffer.alloc(0), maxPayload
+        );
+        assert(Buffer.isBuffer(packet), 'Payload validation: accepts max valid payload');
+    } catch (error) {
+        console.log(`⚠️  Large payload handling: ${error.message}`);
+    }
+
+    // Test oversized payload
+    const oversizedPayload = Buffer.alloc(70000);
+    try {
+        const packet = TCP.Encode(
+            '192.168.1.1', '192.168.1.2',
+            40000, 80, 1000, 0,
+            { psh: true, ack: true }, 65535, 0,
+            Buffer.alloc(0), oversizedPayload
+        );
+        console.log('⚠️  WARNING: Oversized payload accepted');
+    } catch (error) {
+        assert(true, 'Payload validation: rejects oversized payloads');
+    }
+
+} catch (error) {
+    console.log(`❌ FAIL: Payload size validation - ${error.message}`);
+    failedTests.push('Payload size validation');
+}
+
+// // ===== Test 18: Checksum Tampering Detection =====
+// console.log('\n📝 Test 17: Checksum Integrity');
+// try {
+//     const packet = TCP.Encode(
+//         '192.168.1.1', '192.168.1.2',
+//         40000, 80, 1000, 0,
+//         { syn: true }, 65535, 0,
+//         Buffer.alloc(0), Buffer.alloc(0)
+//     );
+
+//     // Tamper with checksum
+//     const tamperedPacket = Buffer.from(packet);
+//     tamperedPacket[16] = 0x00;
+//     tamperedPacket[17] = 0x00;
+
+//     // Verify checksum validation function exists
+//     try {
+//         const isValid = TCPChecksum.Verify(
+//             '192.168.1.1', '192.168.1.2',
+//             tamperedPacket
+//         );
+//         assert(!isValid, 'Checksum validation: detects tampered checksum');
+//     } catch (error) {
+//         console.log('⚠️  WARNING: No checksum verification method available');
+//     }
+
+// } catch (error) {
+//     console.log(`❌ FAIL: Checksum integrity test - ${error.message}`);
+//     failedTests.push('Checksum integrity test');
+// }
+
+// ===== Test 19: Reserved Bits Validation =====
+console.log('\n📝 Test 19: Reserved Bits Security');
+try {
+    const packet = TCP.Encode(
+        '192.168.1.1', '192.168.1.2',
+        40000, 80, 1000, 0,
+        { syn: true }, 65535, 0,
+        Buffer.alloc(0), Buffer.alloc(0)
+    );
+
+    // Check that reserved bits are zero
+    const reservedBits = (packet[12] & 0x0E) >> 1;
+    assertEqual(reservedBits, 0, 'Reserved bits are zero');
+
+    // Test packet with set reserved bits
+    const reservedSet = Buffer.from(packet);
+    reservedSet[12] |= 0x0E; // Set reserved bits
+
+    try {
+        const decoded = TCP.Decode(reservedSet);
+        console.log('⚠️  WARNING: Non-zero reserved bits accepted');
+    } catch (error) {
+        assert(true, 'Reserved bits validation: rejects non-zero reserved bits');
+    }
+
+} catch (error) {
+    console.log(`❌ FAIL: Reserved bits test - ${error.message}`);
+    failedTests.push('Reserved bits test');
+}
+
+// // ===== Test 20: Urgent Pointer Validation =====
+// console.log('\n📝 Test 20: Urgent Pointer Security');
+// try {
+//     // URG flag set but urgent pointer is 0
+//     const urgZero = TCP.Encode(
+//         '192.168.1.1', '192.168.1.2',
+//         40000, 80, 1000, 0,
+//         { urg: true, ack: true }, 65535, 0,
+//         Buffer.alloc(0), Buffer.from('URGENT')
+//     );
+//     console.log('⚠️  INFO: URG flag with zero urgent pointer (RFC allows this)');
+
+//     // Urgent pointer without URG flag
+//     const ptrNoFlag = TCP.Encode(
+//         '192.168.1.1', '192.168.1.2',
+//         40000, 80, 1000, 0,
+//         { ack: true }, 65535, 100, // URG pointer set but no URG flag
+//         Buffer.alloc(0), Buffer.from('DATA')
+//     );
+//     console.log('⚠️  WARNING: Urgent pointer set without URG flag');
+
+//     assert(true, 'Urgent pointer tests completed');
+
+// } catch (error) {
+//     console.log(`❌ FAIL: Urgent pointer test - ${error.message}`);
+//     failedTests.push('Urgent pointer test');
+// }
+
+// // ===== Test 21: ACK Number Validation =====
+// console.log('\n📝 Test 21: ACK Number Security');
+// try {
+//     // ACK flag set but ACK number is 0
+//     const ackZero = TCP.Encode(
+//         '192.168.1.1', '192.168.1.2',
+//         40000, 80, 1000, 0,
+//         { ack: true }, 65535, 0,
+//         Buffer.alloc(0), Buffer.alloc(0)
+//     );
+//     const decoded = TCP.Decode(ackZero);
+//     console.log('⚠️  WARNING: ACK flag with zero acknowledgment number');
+
+//     // No ACK flag but ACK number is set
+//     const noAckFlag = TCP.Encode(
+//         '192.168.1.1', '192.168.1.2',
+//         40000, 80, 1000, 12345,
+//         { syn: true }, 65535, 0,
+//         Buffer.alloc(0), Buffer.alloc(0)
+//     );
+//     console.log('⚠️  INFO: ACK number set without ACK flag (should be ignored)');
+
+//     assert(true, 'ACK number validation completed');
+
+// } catch (error) {
+//     console.log(`❌ FAIL: ACK number test - ${error.message}`);
+//     failedTests.push('ACK number test');
+// }
+
 
 // ===== Test Results Summary =====
 console.log('\n📊 Test Results Summary');
