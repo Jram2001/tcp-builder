@@ -30,5 +30,6 @@
         "test:tcp": "node tcp/test.js",
         "test:tls": "node tls/test.js",
         "test:udp": "node udp/test.js"
-    }
+    },
+    "license": "MIT"
 }
