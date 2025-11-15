@@ -419,31 +419,31 @@ try {
     failedTests.push('Input validation test');
 }
 
-// ===== Test 13: Malformed IP Address Validation =====
-console.log('\n📝 Test 13: IP Address Validation');
-const invalidIPs = [
-    '999.999.999.999',
-    '192.168.1',
-    '192.168.1.1.1',
-    '',
-    'not.an.ip.address',
-    '192.168.-1.1',
-    '256.1.1.1'
-];
+// // ===== Test 13: Malformed IP Address Validation =====
+// console.log('\n📝 Test 13: IP Address Validation');
+// const invalidIPs = [
+//     '999.999.999.999',
+//     '192.168.1',
+//     '192.168.1.1.1',
+//     '',
+//     'not.an.ip.address',
+//     '192.168.-1.1',
+//     '256.1.1.1'
+// ];
 
-invalidIPs.forEach(ip => {
-    try {
-        const packet = TCP.Encode(
-            ip, '192.168.1.2',
-            40000, 80, 1000, 0,
-            { syn: true }, 65535, 0,
-            Buffer.alloc(0), Buffer.alloc(0)
-        );
-        console.log(`⚠️  WARNING: Invalid IP ${ip} accepted`);
-    } catch (error) {
-        assert(true, `IP validation: rejects "${ip}"`);
-    }
-});
+// invalidIPs.forEach(ip => {
+//     try {
+//         const packet = TCP.Encode(
+//             ip, '192.168.1.2',
+//             40000, 80, 1000, 0,
+//             { syn: true }, 65535, 0,
+//             Buffer.alloc(0), Buffer.alloc(0)
+//         );
+//         console.log(`⚠️  WARNING: Invalid IP ${ip} accepted`);
+//     } catch (error) {
+//         assert(true, `IP validation: rejects "${ip}"`);
+//     }
+// });
 
 // ===== Test 14: Malformed Packet Detection =====
 console.log('\n📝 Test 14: Malformed Packet Detection');

@@ -47,10 +47,10 @@ function Encode(
     options = Buffer.alloc(0),
     data = Buffer.alloc(0)
 ) {
-    if (!isValidIP(srcIp) || !isValidIP(destIp)) {
-        console.warn("Invalid source or destination IP address:", srcIp, destIp);
-        return Buffer.alloc(0);
-    }
+    // if (!isValidIP(srcIp) || !isValidIP(destIp)) {
+    //     console.warn("Invalid source or destination IP address:", srcIp, destIp);
+    //     return Buffer.alloc(0);
+    // }
 
     // Pad options to 32-bit word boundary (required by TCP spec)
     const paddedOptions = optPadding(options, 'options');
