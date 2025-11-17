@@ -8,7 +8,6 @@
  */
 function processOptions(options) {
     if (!options || options.length === 0) return Buffer.alloc(0);
-
     const buffers = [];
 
     for (const opt of options) {
@@ -73,6 +72,9 @@ function processOptions(options) {
         } else if (opt.type === 'RAW') {
             if (!Buffer.isBuffer(opt.data)) {
                 throw new Error('RAW option requires a Buffer in .data');
+            }
+            if (optionBuffer.length > 40) {
+                throw new Error('Total options length exceeds maximum (40 bytes)');
             }
             if (opt.data.length === 0) continue;
             buffers.push(opt.data);

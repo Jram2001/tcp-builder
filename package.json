@@ -31,5 +31,8 @@
         "test:tls": "node tls/test.js",
         "test:udp": "node udp/test.js"
     },
-    "license": "MIT"
+    "license": "MIT",
+    "devDependencies": {
+        "esbuild": "^0.27.0"
+    }
 }
