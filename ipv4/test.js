@@ -1,7 +1,7 @@
 // ipv4-test.js
 // Comprehensive test suite for IPv4 packet encoder
 
-const { Encode, DecodeHeader } = require('./ipv4');
+const { Encode, Decode } = require('./ipv4');
 
 let testCount = 0;
 let passedTests = 0;
@@ -72,7 +72,7 @@ try {
     assert(Buffer.isBuffer(packet), 'Packet is Buffer');
     assertEqual(packet.length, 20 + payload.length, 'Packet length correct');
 
-    const decoded = DecodeHeader(packet);
+    const decoded = Decode(packet);
     assertEqual(decoded.version, 4, 'Version correct');
     assertEqual(decoded.IHL, 5, 'IHL correct (no options)');
     assertEqual(decoded.headerLength, 20, 'Header length correct');
@@ -105,7 +105,7 @@ try {
         payload
     );
 
-    const decoded = DecodeHeader(packet);
+    const decoded = Decode(packet);
     assertEqual(decoded.version, 4, 'Version round-trip');
     assertEqual(decoded.DSCP, 32, 'DSCP round-trip');
     assertEqual(decoded.ECN, 2, 'ECN round-trip');
@@ -133,10 +133,10 @@ try {
     const udpPacket = Encode('1.1.1.1', '8.8.8.8', 4, 0, 0, 3, '', 0, 64, 'udp', [], payload);
     const ospfPacket = Encode('1.1.1.1', '8.8.8.8', 4, 0, 0, 4, '', 0, 64, 'ospf', [], payload);
 
-    assertEqual(DecodeHeader(icmpPacket).protocol, 1, 'ICMP protocol correct');
-    assertEqual(DecodeHeader(tcpPacket).protocol, 6, 'TCP protocol correct');
-    assertEqual(DecodeHeader(udpPacket).protocol, 17, 'UDP protocol correct');
-    assertEqual(DecodeHeader(ospfPacket).protocol, 89, 'OSPF protocol correct');
+    assertEqual(Decode(icmpPacket).protocol, 1, 'ICMP protocol correct');
+    assertEqual(Decode(tcpPacket).protocol, 6, 'TCP protocol correct');
+    assertEqual(Decode(udpPacket).protocol, 17, 'UDP protocol correct');
+    assertEqual(Decode(ospfPacket).protocol, 89, 'OSPF protocol correct');
 
 } catch (error) {
     console.log(`❌ FAIL: Different protocols test - ${error.message}`);
@@ -153,10 +153,10 @@ try {
     const bothPacket = Encode('192.168.0.1', '192.168.0.2', 4, 0, 0, 102, 'dfmf', 0, 64, 'tcp', [], payload);
     const noFlagsPacket = Encode('192.168.0.1', '192.168.0.2', 4, 0, 0, 103, '', 0, 64, 'tcp', [], payload);
 
-    const dfDecoded = DecodeHeader(dfPacket);
-    const mfDecoded = DecodeHeader(mfPacket);
-    const bothDecoded = DecodeHeader(bothPacket);
-    const noFlagsDecoded = DecodeHeader(noFlagsPacket);
+    const dfDecoded = Decode(dfPacket);
+    const mfDecoded = Decode(mfPacket);
+    const bothDecoded = Decode(bothPacket);
+    const noFlagsDecoded = Decode(noFlagsPacket);
 
     assertEqual(dfDecoded.flags.DF, true, 'DF flag set');
     assertEqual(dfDecoded.flags.MF, false, 'MF flag not set');
@@ -184,9 +184,9 @@ try {
     const packet2 = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, 200, 'mf', 185, 64, 'tcp', [], payload);
     const packet3 = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, 200, '', 370, 64, 'tcp', [], payload);
 
-    assertEqual(DecodeHeader(packet1).fragmentOffset, 0, 'First fragment offset');
-    assertEqual(DecodeHeader(packet2).fragmentOffset, 185, 'Second fragment offset');
-    assertEqual(DecodeHeader(packet3).fragmentOffset, 370, 'Third fragment offset');
+    assertEqual(Decode(packet1).fragmentOffset, 0, 'First fragment offset');
+    assertEqual(Decode(packet2).fragmentOffset, 185, 'Second fragment offset');
+    assertEqual(Decode(packet3).fragmentOffset, 370, 'Third fragment offset');
 
 } catch (error) {
     console.log(`❌ FAIL: Fragment offset test - ${error.message}`);
@@ -202,7 +202,7 @@ try {
     const rrPacket = Encode('172.16.0.1', '172.16.0.2', 4, 0, 0, 300, '', 0, 64, 'tcp',
         [{ type: 'RR', length: 11 }], payload);
 
-    const rrDecoded = DecodeHeader(rrPacket);
+    const rrDecoded = Decode(rrPacket);
     assertEqual(rrDecoded.IHL, 8, 'IHL with RR option (20 + 11 + 1 padding = 32 bytes / 4)');
     assertEqual(rrDecoded.hasOptions, true, 'Has options flag set');
     assertEqual(rrDecoded.optionsLength, 12, 'Options length correct (11 + 1 padding)');
@@ -211,14 +211,14 @@ try {
     const nopPacket = Encode('172.16.0.1', '172.16.0.2', 4, 0, 0, 301, '', 0, 64, 'tcp',
         [{ type: 'NOP' }, { type: 'NOP' }, { type: 'NOP' }, { type: 'NOP' }], payload);
 
-    const nopDecoded = DecodeHeader(nopPacket);
+    const nopDecoded = Decode(nopPacket);
     assertEqual(nopDecoded.IHL, 6, 'IHL with NOP options (20 + 4 = 24 bytes / 4)');
 
     // Multiple options
     const multiPacket = Encode('172.16.0.1', '172.16.0.2', 4, 0, 0, 302, '', 0, 64, 'tcp',
         [{ type: 'NOP' }, { type: 'RR', length: 7 }], payload);
 
-    const multiDecoded = DecodeHeader(multiPacket);
+    const multiDecoded = Decode(multiPacket);
     assertEqual(multiDecoded.hasOptions, true, 'Multiple options: has options');
     assertEqual(multiDecoded.optionsLength, 8, 'Multiple options length (1 + 7 = 8 bytes)');
 
@@ -231,7 +231,7 @@ try {
 console.log('\n📝 Test 7: Empty Payload');
 try {
     const packet = Encode('127.0.0.1', '127.0.0.1', 4, 0, 0, 0, '', 0, 255, 'tcp', [], Buffer.alloc(0));
-    const decoded = DecodeHeader(packet);
+    const decoded = Decode(packet);
 
     assertEqual(packet.length, 20, 'Empty payload packet length');
     assertEqual(decoded.totalLength, 20, 'Empty payload total length');
@@ -246,7 +246,7 @@ console.log('\n📝 Test 8: Maximum Size Payload');
 try {
     const maxPayload = Buffer.alloc(65515, 0xAB); // 65535 - 20 bytes header
     const packet = Encode('10.1.1.1', '10.1.1.2', 4, 0, 0, 999, '', 0, 64, 'tcp', [], maxPayload);
-    const decoded = DecodeHeader(packet);
+    const decoded = Decode(packet);
 
     assertEqual(packet.length, 65535, 'Maximum packet size');
     assertEqual(decoded.totalLength, 65535, 'Maximum total length');
@@ -266,9 +266,9 @@ try {
     const dscp32 = Encode('1.1.1.1', '2.2.2.2', 4, 32, 0, 501, '', 0, 64, 'tcp', [], payload);
     const dscp63 = Encode('1.1.1.1', '2.2.2.2', 4, 63, 0, 502, '', 0, 64, 'tcp', [], payload);
 
-    assertEqual(DecodeHeader(dscp0).DSCP, 0, 'DSCP value 0');
-    assertEqual(DecodeHeader(dscp32).DSCP, 32, 'DSCP value 32');
-    assertEqual(DecodeHeader(dscp63).DSCP, 63, 'DSCP value 63');
+    assertEqual(Decode(dscp0).DSCP, 0, 'DSCP value 0');
+    assertEqual(Decode(dscp32).DSCP, 32, 'DSCP value 32');
+    assertEqual(Decode(dscp63).DSCP, 63, 'DSCP value 63');
 
     // Different ECN values
     const ecn0 = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 503, '', 0, 64, 'tcp', [], payload);
@@ -276,10 +276,10 @@ try {
     const ecn2 = Encode('1.1.1.1', '2.2.2.2', 4, 0, 2, 505, '', 0, 64, 'tcp', [], payload);
     const ecn3 = Encode('1.1.1.1', '2.2.2.2', 4, 0, 3, 506, '', 0, 64, 'tcp', [], payload);
 
-    assertEqual(DecodeHeader(ecn0).ECN, 0, 'ECN value 0');
-    assertEqual(DecodeHeader(ecn1).ECN, 1, 'ECN value 1');
-    assertEqual(DecodeHeader(ecn2).ECN, 2, 'ECN value 2');
-    assertEqual(DecodeHeader(ecn3).ECN, 3, 'ECN value 3');
+    assertEqual(Decode(ecn0).ECN, 0, 'ECN value 0');
+    assertEqual(Decode(ecn1).ECN, 1, 'ECN value 1');
+    assertEqual(Decode(ecn2).ECN, 2, 'ECN value 2');
+    assertEqual(Decode(ecn3).ECN, 3, 'ECN value 3');
 
 } catch (error) {
     console.log(`❌ FAIL: DSCP and ECN test - ${error.message}`);
@@ -295,17 +295,17 @@ try {
     const lowerProtocol = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 601, '', 0, 64, 'tcp', [], payload);
     const mixedProtocol = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 602, '', 0, 64, 'TcP', [], payload);
 
-    assertEqual(DecodeHeader(upperProtocol).protocol, 6, 'Uppercase protocol');
-    assertEqual(DecodeHeader(lowerProtocol).protocol, 6, 'Lowercase protocol');
-    assertEqual(DecodeHeader(mixedProtocol).protocol, 6, 'Mixed case protocol');
+    assertEqual(Decode(upperProtocol).protocol, 6, 'Uppercase protocol');
+    assertEqual(Decode(lowerProtocol).protocol, 6, 'Lowercase protocol');
+    assertEqual(Decode(mixedProtocol).protocol, 6, 'Mixed case protocol');
 
     const upperFlags = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 603, 'DF', 0, 64, 'tcp', [], payload);
     const lowerFlags = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 604, 'df', 0, 64, 'tcp', [], payload);
     const mixedFlags = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 605, 'Df', 0, 64, 'tcp', [], payload);
 
-    assertEqual(DecodeHeader(upperFlags).flags.DF, true, 'Uppercase flags');
-    assertEqual(DecodeHeader(lowerFlags).flags.DF, true, 'Lowercase flags');
-    assertEqual(DecodeHeader(mixedFlags).flags.DF, true, 'Mixed case flags');
+    assertEqual(Decode(upperFlags).flags.DF, true, 'Uppercase flags');
+    assertEqual(Decode(lowerFlags).flags.DF, true, 'Lowercase flags');
+    assertEqual(Decode(mixedFlags).flags.DF, true, 'Mixed case flags');
 
 } catch (error) {
     console.log(`❌ FAIL: Case insensitivity test - ${error.message}`);

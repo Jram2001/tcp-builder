@@ -10,6 +10,13 @@ const {
     validateParameters
 } = require('./utils');
 
+const {
+    checkAndRead16,
+    checkAndWrite16,
+    checkAndRead8,
+    checkAndWrite8
+} = require("../util");
+
 /**
  * Encode an IPv4 packet with the given parameters
  * 
@@ -83,28 +90,28 @@ function Encode(srcIp, destIp, version, DSCP, ECN, identification, flag, fragmen
 
     // Build IPv4 header (20 bytes)
     // Byte 0: Version (4 bits) + IHL (4 bits)
-    header.writeUInt8((version << 4) | (IHL & 0x0F), 0);
+    checkAndWrite8((version << 4) | (IHL & 0x0F), 0);
 
     // Byte 1: DSCP (6 bits) + ECN (2 bits)
-    header.writeUInt8((DSCP << 2) | ECN, 1);
+    checkAndWrite8((DSCP << 2) | ECN, 1);
 
     // Bytes 2-3: Total Length
-    header.writeUInt16BE(totalLength, 2);
+    checkAndWrite16(totalLength, 2);
 
     // Bytes 4-5: Identification
-    header.writeUInt16BE(identification, 4);
+    checkAndWrite16(identification, 4);
 
     // Bytes 6-7: Flags (3 bits) + Fragment Offset (13 bits)
-    header.writeUInt16BE(FOA, 6);
+    checkAndWrite16(FOA, 6);
 
     // Byte 8: Time to Live
-    header.writeUInt8(ttl, 8);
+    checkAndWrite8(ttl, 8);
 
     // Byte 9: Protocol
-    header.writeUInt8(processedProtocol, 9);
+    checkAndWrite8(processedProtocol, 9);
 
     // Bytes 10-11: Header Checksum (placeholder, calculated below)
-    header.writeUInt16BE(0, 10);
+    checkAndWrite16(0, 10);
 
     // Bytes 12-15: Source IP Address
     header.writeUInt32BE(processIP(srcIp), 12);
@@ -114,7 +121,7 @@ function Encode(srcIp, destIp, version, DSCP, ECN, identification, flag, fragmen
 
     // Calculate and set checksum
     const checksum = onesComplementSum(Buffer.concat([header, options]));
-    header.writeUInt16BE(checksum, 10);
+    checkAndWrite16(checksum, 10);
 
     // Construct and return final packet
     return Buffer.concat([header, options, payload]);
@@ -125,43 +132,60 @@ function Encode(srcIp, destIp, version, DSCP, ECN, identification, flag, fragmen
  * @param {Buffer} packet - IPv4 packet buffer
  * @returns {Object} Decoded packet information
  */
-function DecodeHeader(packet) {
+function Decode(packet) {
     if (!Buffer.isBuffer(packet) || packet.length < 20) {
         throw new Error('Invalid packet: must be a Buffer with at least 20 bytes');
     }
 
-    const versionIHL = packet.readUInt8(0);
+    const versionIHL = checkAndRead8(packet, 0);
     const version = (versionIHL >> 4) & 0x0F;
     const IHL = versionIHL & 0x0F;
     const headerLength = IHL * 4;
 
-    const dscpEcn = packet.readUInt8(1);
+
+    if (version !== 4) {
+        throw new Error('Not an IPv4 packet');
+    }
+    if (headerLength < 20 || headerLength > 60) {
+        throw new Error('Invalid IHL (header length)');
+    }
+    if (packet.length < headerLength) {
+        throw new Error('Buffer shorter than header length');
+    }
+
+
+    const dscpEcn = checkAndRead8(packet, 1);
     const DSCP = (dscpEcn >> 2) & 0x3F;
     const ECN = dscpEcn & 0x03;
 
-    const totalLength = packet.readUInt16BE(2);
-    const identification = packet.readUInt16BE(4);
+    const totalLength = checkAndRead16(packet, 2);
 
-    const flagsOffset = packet.readUInt16BE(6);
+    if (totalLength < headerLength || totalLength > packet.length) {
+        throw new Error('Total-length field exceeds actual buffer');
+    }
+
+    const identification = checkAndRead16(packet, 4);
+
+    const flagsOffset = checkAndRead16(packet, 6);
     const flags = (flagsOffset >> 13) & 0x07;
     const fragmentOffset = flagsOffset & 0x1FFF;
 
-    const ttl = packet.readUInt8(8);
-    const protocol = packet.readUInt8(9);
-    const checksum = packet.readUInt16BE(10);
+    const ttl = checkAndRead8(packet, 8);
+    const protocol = checkAndRead8(packet, 9);
+    const checksum = checkAndRead16(packet, 10);
 
     const srcIp = [
-        packet.readUInt8(12),
-        packet.readUInt8(13),
-        packet.readUInt8(14),
-        packet.readUInt8(15)
+        checkAndRead8(packet, 12),
+        checkAndRead8(packet, 13),
+        checkAndRead8(packet, 14),
+        checkAndRead8(packet, 15)
     ].join('.');
 
     const destIp = [
-        packet.readUInt8(16),
-        packet.readUInt8(17),
-        packet.readUInt8(18),
-        packet.readUInt8(19)
+        checkAndRead8(packet, 16),
+        checkAndRead8(packet, 17),
+        checkAndRead8(packet, 18),
+        checkAndRead8(packet, 19)
     ].join('.');
 
     return {
@@ -213,7 +237,7 @@ if (require.main === module) {
     console.log('Length:', packet.length, 'bytes');
     console.log('Hex:', packet.toString('hex'));
     console.log('\nDecoded Header:');
-    console.log(DecodeHeader(packet));
+    console.log(Decode(packet));
 
     // Example with options
     console.log('\n--- Packet with Record Route Option ---\n');
@@ -237,7 +261,7 @@ if (require.main === module) {
     console.log('Length:', packetWithOptions.length, 'bytes');
     console.log('Hex:', packetWithOptions.toString('hex'));
     console.log('\nDecoded Header:');
-    console.log(DecodeHeader(packetWithOptions));
+    console.log(Decode(packetWithOptions));
 }
 
-module.exports = { Encode, DecodeHeader };
+module.exports = { Encode, Decode };
