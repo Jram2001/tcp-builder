@@ -70,6 +70,12 @@ function processOptions(options) {
             buf[2] = 5;      // Pointer
             buf[3] = opt.flags || 0; // Overflow counter and flags
             buffers.push(buf);
+        } else if (opt.type === 'RAW') {
+            if (!Buffer.isBuffer(opt.data)) {
+                throw new Error('RAW option requires a Buffer in .data');
+            }
+            if (opt.data.length === 0) continue;
+            buffers.push(opt.data);
         } else {
             throw new Error(`Unsupported option type: ${opt.type}`);
         }

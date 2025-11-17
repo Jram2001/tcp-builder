@@ -409,6 +409,116 @@ try {
     failedTests.push('Checksum verification');
 }
 
+
+// ===== Test 21: Zero-length Options (should still pad to 4-byte boundary) =====
+console.log('\n📝 Test 21: Zero-length Options List');
+try {
+    const payload = Buffer.from('zero-opt');
+    const pkt = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, 777, '', 0, 64, 'tcp', [], payload);
+    const dec = Decode(pkt);
+    assertEqual(dec.IHL, 5, 'IHL remains 5 when options list is empty');
+    assertEqual(dec.optionsLength, 0, 'optionsLength 0');
+} catch (e) {
+    console.log(`❌ FAIL: Zero-length options - ${e.message}`);
+    failedTests.push('Zero-length options');
+}
+
+// ===== Test 22: Maximum Option Space (40 bytes → IHL = 15) =====
+console.log('\n📝 Test 22: Full 40-byte Options');
+try {
+    const bigOpt = Buffer.alloc(40, 0x01); // 40 bytes of NOP-like filler
+    const payload = Buffer.from('max-opt');
+    const pkt = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, 888, '', 0, 64, 'tcp',
+        [{ type: 'RAW', data: bigOpt }], payload);
+    const dec = Decode(pkt);
+    assertEqual(dec.IHL, 15, 'IHL = 15 when options consume 40 B');
+    assertEqual(dec.optionsLength, 40, 'optionsLength 40');
+    assertEqual(pkt.length, 60 + payload.length, 'total packet size');
+} catch (e) {
+    console.log(`❌ FAIL: Max options - ${e.message}`);
+    failedTests.push('Max options');
+}
+
+// ===== Test 23: Last Fragment (MF=0, offset≠0) =====
+console.log('\n📝 Test 23: Last Fragment (MF=0, offset>0)');
+try {
+    const payload = Buffer.alloc(8, 0xCC);
+    const pkt = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, 999, '', 185, 64, 'tcp', [], payload);
+    const dec = Decode(pkt);
+    assertEqual(dec.flags.MF, false, 'MF clear');
+    assertEqual(dec.flags.DF, false, 'DF clear');
+    assertEqual(dec.fragmentOffset, 185, 'fragment offset preserved');
+} catch (e) {
+    console.log(`❌ FAIL: Last fragment - ${e.message}`);
+    failedTests.push('Last fragment');
+}
+
+// ===== Test 24: Decode Truncated Buffer (< 20 bytes) =====
+console.log('\n📝 Test 24: Decode Truncated Buffer');
+assertThrows(() => Decode(Buffer.alloc(19)), 'Decode throws on < 20 bytes');
+
+// ===== Test 25: Decode Buffer Shorter Than IHL =====
+console.log('\n📝 Test 25: Decode Buffer Shorter Than Header Length');
+const fake = Buffer.alloc(25);
+fake.writeUInt8(0x46, 0); // IHL=6 → 24 B needed, but we have only 25
+assertThrows(() => Decode(fake), 'Decode throws when buffer < IHL');
+
+// ===== Test 26: Decode Total-Length < IHL =====
+console.log('\n📝 Test 26: Decode Total-Length < Header Length');
+const bad = Buffer.alloc(60);
+bad.writeUInt8(0x45, 0); // IHL=5 → 20 B
+bad.writeUInt16BE(19, 2); // total-length 19 < 20
+assertThrows(() => Decode(bad), 'Decode throws when total-length < IHL');
+
+// ===== Test 27: Decode Total-Length > Buffer =====
+console.log('\n📝 Test 27: Decode Total-Length > Actual Buffer');
+const bad2 = Buffer.alloc(30);
+bad2.writeUInt8(0x45, 0);
+bad2.writeUInt16BE(60, 2); // claims 60 bytes, only 30 present
+assertThrows(() => Decode(bad2), 'Decode throws when total-length > buffer');
+
+// ===== Test 28: Performance Smoke (encode/decode 10 k packets < 1 s) =====
+console.log('\n📝 Test 28: Performance Smoke (10 k packets)');
+try {
+    const start = process.hrtime.bigint();
+    const payload = Buffer.alloc(500, 0x55);
+    for (let i = 0; i < 10000; i++) {
+        const p = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, i, 'df', 0, 64, 'tcp', [], payload);
+        Decode(p);
+    }
+    const ms = Number(process.hrtime.bigint() - start) / 1e6;
+    assert(ms < 1000, `10 k packets processed in ${ms.toFixed(1)} ms (< 1 s)`);
+} catch (e) {
+    console.log(`❌ FAIL: Performance smoke - ${e.message}`);
+    failedTests.push('Performance smoke');
+}
+
+// ===== Test 29: Reserved Flag Bit (bit 7) Must Be Zero =====
+console.log('\n📝 Test 29: Reserved Flag Bit Always Zero');
+try {
+    const pkt = Encode('1.1.1.1', '2.2.2.2', 4, 0, 0, 123, '', 0, 64, 'tcp', [], Buffer.from('x'));
+    const flagsByte = (pkt[6] >> 5) & 0x07; // top 3 bits
+    assertEqual(flagsByte & 0x04, 0, 'Reserved bit (0x04) is zero');
+} catch (e) {
+    console.log(`❌ FAIL: Reserved flag bit - ${e.message}`);
+    failedTests.push('Reserved flag bit');
+}
+
+// ===== Test 30: Correct Padding When Options Length % 4 ≠ 0 =====
+console.log('\n📝 Test 30: Options Padding to 4-Byte Boundary');
+try {
+    const opt = Buffer.alloc(7, 0x99); // 7 bytes → needs 1 byte pad
+    const payload = Buffer.from('pad-test');
+    const pkt = Encode('10.0.0.1', '10.0.0.2', 4, 0, 0, 111, '', 0, 64, 'tcp',
+        [{ type: 'RAW', data: opt }], payload);
+    const dec = Decode(pkt);
+    assertEqual(dec.IHL, 7, 'IHL 7 → 28-byte header (20 + 7 + 1 pad)');
+    assertEqual(dec.optionsLength, 8, 'Reported options length includes pad');
+} catch (e) {
+    console.log(`❌ FAIL: Options padding - ${e.message}`);
+    failedTests.push('Options padding');
+}
+
 // ===== Test Results Summary =====
 console.log('\n📊 Test Results Summary');
 console.log('='.repeat(50));

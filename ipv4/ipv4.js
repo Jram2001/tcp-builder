@@ -90,28 +90,28 @@ function Encode(srcIp, destIp, version, DSCP, ECN, identification, flag, fragmen
 
     // Build IPv4 header (20 bytes)
     // Byte 0: Version (4 bits) + IHL (4 bits)
-    checkAndWrite8((version << 4) | (IHL & 0x0F), 0);
+    checkAndWrite8(header, (version << 4) | (IHL & 0x0F), 0);
 
     // Byte 1: DSCP (6 bits) + ECN (2 bits)
-    checkAndWrite8((DSCP << 2) | ECN, 1);
+    checkAndWrite8(header, (DSCP << 2) | ECN, 1);
 
     // Bytes 2-3: Total Length
-    checkAndWrite16(totalLength, 2);
+    checkAndWrite16(header, totalLength, 2);
 
     // Bytes 4-5: Identification
-    checkAndWrite16(identification, 4);
+    checkAndWrite16(header, identification, 4);
 
     // Bytes 6-7: Flags (3 bits) + Fragment Offset (13 bits)
-    checkAndWrite16(FOA, 6);
+    checkAndWrite16(header, FOA, 6);
 
     // Byte 8: Time to Live
-    checkAndWrite8(ttl, 8);
+    checkAndWrite8(header, ttl, 8);
 
     // Byte 9: Protocol
-    checkAndWrite8(processedProtocol, 9);
+    checkAndWrite8(header, processedProtocol, 9);
 
     // Bytes 10-11: Header Checksum (placeholder, calculated below)
-    checkAndWrite16(0, 10);
+    checkAndWrite16(header, 0, 10);
 
     // Bytes 12-15: Source IP Address
     header.writeUInt32BE(processIP(srcIp), 12);
@@ -121,7 +121,7 @@ function Encode(srcIp, destIp, version, DSCP, ECN, identification, flag, fragmen
 
     // Calculate and set checksum
     const checksum = onesComplementSum(Buffer.concat([header, options]));
-    checkAndWrite16(checksum, 10);
+    checkAndWrite16(header, checksum, 10);
 
     // Construct and return final packet
     return Buffer.concat([header, options, payload]);

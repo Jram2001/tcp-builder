@@ -7,11 +7,11 @@
  */
 function checkAndRead16(buffer, from = 0) {
     if (!Buffer.isBuffer(buffer)) {
-        console.warn('Packet must be a Buffer');
+        console.warn('[checkAndRead16] Packet must be a Buffer');
         return 0;
     }
     if (buffer.length < from + 2) {
-        console.warn('Buffer too short for 16-bit field');
+        console.warn('[checkAndRead16] Buffer too short for 16-bit field');
         return 0;
     }
     return buffer.readUInt16BE(from);
@@ -26,11 +26,11 @@ function checkAndRead16(buffer, from = 0) {
  */
 function checkAndRead8(buffer, from = 0) {
     if (!Buffer.isBuffer(buffer)) {
-        console.warn('Packet must be a Buffer');
+        console.warn('[checkAndRead8] Packet must be a Buffer');
         return 0;
     }
     if (buffer.length < from + 1) {
-        console.warn('Buffer too short for 8-bit field');
+        console.warn('[checkAndRead8] Buffer too short for 8-bit field');
         return 0;
     }
     return buffer.readUInt8(from);
@@ -46,15 +46,15 @@ function checkAndRead8(buffer, from = 0) {
  */
 function checkAndWrite16(buffer, value, from = 0) {
     if (!Buffer.isBuffer(buffer)) {
-        console.warn('Packet must be a Buffer');
+        console.warn('[checkAndWrite16] Packet must be a Buffer');
         return 0;
     }
     if (buffer.length < from + 2) {
-        console.warn('Buffer too short for 16-bit field');
+        console.warn('[checkAndWrite16] Buffer too short for 16-bit field');
         return 0;
     }
     if (value < 0 || value > 0xFFFF || !Number.isInteger(value)) {
-        console.warn('Value out of 16-bit unsigned range');
+        console.warn('[checkAndWrite16] Value out of 16-bit unsigned range');
         return 0;
     }
     buffer.writeUInt16BE(value, from);
@@ -70,15 +70,15 @@ function checkAndWrite16(buffer, value, from = 0) {
  */
 function checkAndWrite8(buffer, value, from = 0) {
     if (!Buffer.isBuffer(buffer)) {
-        console.warn('Packet must be a Buffer');
+        console.warn('[checkAndWrite16] Packet must be a Buffer');
         return 0;
     }
     if (buffer.length < from + 1) {
-        console.warn('Buffer too short for 8-bit field');
+        console.warn('[checkAndWrite16] Buffer too short for 8-bit field');
         return 0;
     }
     if (value < 0 || value > 0xFF || !Number.isInteger(value)) {
-        console.warn('Value out of 8-bit unsigned range');
+        console.warn('[checkAndWrite16] Value out of 8-bit unsigned range');
         return 0;
     }
     buffer.writeUInt8(value, from);
