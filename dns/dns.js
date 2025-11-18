@@ -1,3 +1,10 @@
+const {
+    checkAndRead16,
+    checkAndWrite16,
+    checkAndRead8,
+    checkAndWrite8
+} = require("../util");
+
 /**
  * DNS Packet Builder - Main API
  * High-level interface for DNS operations
@@ -12,12 +19,12 @@ const { DNS_TYPES, DNS_CLASSES } = require('./constants');
  */
 function Encode(transactionId, flags, QDcount = 1, ANcount = 0, NScount = 0, AScount = 0) {
     const packet = Buffer.alloc(12);
-    packet.writeUInt16BE(transactionId, 0);
-    packet.writeUInt16BE(encodeFlags(flags), 2);
-    packet.writeUInt16BE(QDcount, 4);
-    packet.writeUInt16BE(ANcount, 6);
-    packet.writeUInt16BE(NScount, 8);
-    packet.writeUInt16BE(AScount, 10);
+    checkAndWrite16(packet, transactionId, 0);
+    checkAndWrite16(packet, encodeFlags(flags), 2);
+    checkAndWrite16(packet, QDcount, 4);
+    checkAndWrite16(packet, ANcount, 6);
+    checkAndWrite16(packet, NScount, 8);
+    checkAndWrite16(packet, AScount, 10);
     return packet;
 }
 
@@ -26,14 +33,19 @@ function Encode(transactionId, flags, QDcount = 1, ANcount = 0, NScount = 0, ASc
  * Extracts transaction ID, flags, and section counts from 12-byte header
  */
 function Decode(packet) {
-    return {
-        transactionId: packet.readUInt16BE(0),
-        flags: parseFlags(packet.readUInt16BE(2)),
-        questionCount: packet.readUInt16BE(4),
-        answerCount: packet.readUInt16BE(6),
-        authorityCount: packet.readUInt16BE(8),
-        additionalCount: packet.readUInt16BE(10)
+    if (packet.length < 12) {
+        console.warn("Potentially malformed packet: DNS PAcket must be less that 12 bytes long")
     };
+
+    return {
+        transactionId: checkAndRead16(packet, 0),
+        flags: parseFlags(checkAndRead16(packet, 2)),
+        questionCount: checkAndRead16(packet, 4),
+        answerCount: checkAndRead16(packet, 6),
+        authorityCount: checkAndRead16(packet, 8),
+        additionalCount: checkAndRead16(packet, 10)
+    };
+
 }
 
 // Build question section
@@ -42,8 +54,8 @@ function buildQuestion(domain, type, cls = DNS_CLASSES.IN) {
     const typeBuffer = Buffer.alloc(2);
     const classBuffer = Buffer.alloc(2);
 
-    typeBuffer.writeUInt16BE(type, 0);
-    classBuffer.writeUInt16BE(cls, 0);
+    checkAndWrite16(typeBuffer, type, 0);
+    checkAndWrite16(classBuffer, cls, 0);
 
     return Buffer.concat([encodedName, typeBuffer, classBuffer]);
 }

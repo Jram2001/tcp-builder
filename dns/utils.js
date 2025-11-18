@@ -19,15 +19,34 @@ function encodeDomainName(name) {
 
 // Extract flags from 16-bit field
 function parseFlags(flagsField) {
+
+    const qr = (field >>> 15) & 0x1;
+    const opcode = (field >>> 11) & 0xF;
+    const aa = (field >>> 10) & 0x1;
+    const tc = (field >>> 9) & 0x1;
+    const rd = (field >>> 8) & 0x1;
+    const ra = (field >>> 7) & 0x1;
+    const z = (field >>> 4) & 0x7;   // 3 reserved bits
+    const rcode = field & 0xF;
+
+    if (z != 0) {
+        console.log("Potentially malformed packet : Reserved bit must always be zeor");
+    }
+    if (opcode > 5) {
+        console.log("Potentially malformed packet : Opcode mist be less than 6");
+    }
+    if (rcode > 15) {
+        console.log("Potentially malformed packet : querry response mist be less than 6");
+    }
     return {
-        qr: (flagsField >> 15) & 0x1,
-        opcode: (flagsField >> 11) & 0xF,
-        aa: (flagsField >> 10) & 0x1,
-        tc: (flagsField >> 9) & 0x1,
-        rd: (flagsField >> 8) & 0x1,
-        ra: (flagsField >> 7) & 0x1,
-        z: (flagsField >> 4) & 0x7,
-        rcode: flagsField & 0xF
+        qr,
+        opcode,
+        aa,
+        tc,
+        rd,
+        ra,
+        z,
+        rcode
     };
 }
 
