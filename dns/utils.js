@@ -20,14 +20,14 @@ function encodeDomainName(name) {
 // Extract flags from 16-bit field
 function parseFlags(flagsField) {
 
-    const qr = (field >>> 15) & 0x1;
-    const opcode = (field >>> 11) & 0xF;
-    const aa = (field >>> 10) & 0x1;
-    const tc = (field >>> 9) & 0x1;
-    const rd = (field >>> 8) & 0x1;
-    const ra = (field >>> 7) & 0x1;
-    const z = (field >>> 4) & 0x7;   // 3 reserved bits
-    const rcode = field & 0xF;
+    const qr = (flagsField >>> 15) & 0x1;
+    const opcode = (flagsField >>> 11) & 0xF;
+    const aa = (flagsField >>> 10) & 0x1;
+    const tc = (flagsField >>> 9) & 0x1;
+    const rd = (flagsField >>> 8) & 0x1;
+    const ra = (flagsField >>> 7) & 0x1;
+    const z = (flagsField >>> 4) & 0x7;   // 3 reserved bits
+    const rcode = flagsField & 0xF;
 
     if (z != 0) {
         console.warn("Potentially malformed packet : Reserved bit must always be zeor");
