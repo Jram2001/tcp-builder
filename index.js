@@ -9,7 +9,7 @@ module.exports = {
     ipv6: require('./ipv6/ipv6'),
     tcp: require('./tcp/tcp'),
     udp: require('./udp/udp'),
-    tls: require('./tls/tls'),
+    // tls: require('./tls/tls'),
 
     optionBuilder: require('./option-bulder.js'),
 

@@ -55,4 +55,20 @@ function calculateChecksum(pseudoHeader, udpHeader, data) {
     return ~sum & 0xFFFF; // One's complement, 16-bit checksum
 }
 
-module.exports = { buildPseudoHeader, calculateChecksum };
+
+/**
+ * Validates IPv4 address format
+ * @param {string} ipAddress - IP address string
+ * @returns {boolean} True if valid IPv4 address
+ */
+function isValidIP(ipAddress) {
+    const octets = ipAddress.split('.').map(n => parseInt(n, 10));
+
+    if (octets.length !== 4) {
+        return false;
+    }
+
+    return octets.every(n => !Number.isNaN(n) && n >= 0 && n <= 255);
+}
+
+module.exports = { buildPseudoHeader, calculateChecksum, isValidIP };

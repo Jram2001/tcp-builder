@@ -17,4 +17,19 @@ function processIP(ip) {
     return Buffer.from(bytes);
 }
 
-module.exports = { readMAC, readIP, processIP, processMAC };
+/**
+ * Validates IPv4 address format
+ * @param {string} ipAddress - IP address string
+ * @returns {boolean} True if valid IPv4 address
+ */
+function isValidIP(ipAddress) {
+    const octets = ipAddress.split('.').map(n => parseInt(n, 10));
+
+    if (octets.length !== 4) {
+        return false;
+    }
+
+    return octets.every(n => !Number.isNaN(n) && n >= 0 && n <= 255);
+}
+
+module.exports = { readMAC, readIP, processIP, processMAC, isValidIP };
