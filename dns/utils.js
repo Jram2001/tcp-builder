@@ -30,14 +30,24 @@ function parseFlags(flagsField) {
     const rcode = field & 0xF;
 
     if (z != 0) {
-        console.log("Potentially malformed packet : Reserved bit must always be zeor");
+        console.warn("Potentially malformed packet : Reserved bit must always be zeor");
     }
     if (opcode > 5) {
-        console.log("Potentially malformed packet : Opcode mist be less than 6");
+        console.warn("Potentially malformed packet : Opcode mist be less than 6");
     }
     if (rcode > 15) {
-        console.log("Potentially malformed packet : querry response mist be less than 6");
+        console.warn("Potentially malformed packet : querry response mist be less than 6");
     }
+
+    if (qr && ra) {
+        console.warn("Weired flag combination found")
+    }
+
+    if (qr && aa) {
+        console.warn("Weired flag combination found")
+    }
+
+
     return {
         qr,
         opcode,
