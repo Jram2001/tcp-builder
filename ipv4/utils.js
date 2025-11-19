@@ -73,9 +73,7 @@ function processOptions(options) {
             if (!Buffer.isBuffer(opt.data)) {
                 throw new Error('RAW option requires a Buffer in .data');
             }
-            if (optionBuffer.length > 40) {
-                throw new Error('Total options length exceeds maximum (40 bytes)');
-            }
+
             if (opt.data.length === 0) continue;
             buffers.push(opt.data);
         } else {
@@ -84,6 +82,10 @@ function processOptions(options) {
     }
 
     let optionBuffer = Buffer.concat(buffers);
+
+    if (optionBuffer.length > 40) {
+        throw new Error('Total options length exceeds maximum (40 bytes)');
+    }
 
     // Pad to 4-byte boundary
     const padding = (4 - (optionBuffer.length % 4)) % 4;
